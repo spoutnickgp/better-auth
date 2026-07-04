@@ -15,7 +15,7 @@ import {
 	parseSetCookieHeader,
 	setSessionCookie,
 } from "../../cookies";
-import { mergeSchema, parseUserOutput } from "../../db/schema";
+import { mergeSchema, parseUserInput, parseUserOutput } from "../../db/schema";
 import { PACKAGE_VERSION } from "../../version";
 import { ANONYMOUS_ERROR_CODES } from "./error-codes";
 import { schema } from "./schema";
@@ -65,6 +65,7 @@ export const anonymous = (options?: AnonymousOptions | undefined) => {
 				"/sign-in/anonymous",
 				{
 					method: "POST",
+                    body: z.record(z.string(), z.any()).optional(),
 					metadata: {
 						openapi: {
 							description: "Sign in anonymously",
@@ -106,9 +107,16 @@ export const anonymous = (options?: AnonymousOptions | undefined) => {
 						);
 					}
 
+                    const additionalFields = parseUserInput(
+                                            ctx.context.options,
+                                            ctx.body,
+                                            "create",
+                                        );
+
 					const email = await getAnonUserEmail(options);
 					const name = (await options?.generateName?.(ctx)) || "Anonymous";
 					const newUser = await ctx.context.internalAdapter.createUser({
+                        ...additionalFields,
 						email,
 						emailVerified: false,
 						isAnonymous: true,
